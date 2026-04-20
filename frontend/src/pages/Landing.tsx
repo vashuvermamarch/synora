@@ -182,37 +182,37 @@ export default function Landing() {
 
 
 
-          <div className="flex-1 card p-12 relative rotate-1">
-            <Quote size={48} className="text-primary mb-8" />
-            <p className="text-4xl font-black mb-12 leading-tight uppercase">
-              "I TAUGHT REACT AND LEARNED ITALIAN COOKING IN TWO WEEKS. SKILLSWAP IS THE MOST EFFICIENT HUMAN NETWORK I'VE EVER SEEN."
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary border-4 border-secondary"></div>
-              <div>
-                <p className="font-black text-xl uppercase">MARCO ROSSI</p>
-                <p className="text-xs font-bold text-muted uppercase">FULL STACK CHEF</p>
+            <div className="flex-1 card p-12 relative rotate-1">
+              <Quote size={48} className="text-primary mb-8" />
+              <p className="text-4xl font-black mb-12 leading-tight uppercase">
+                "I TAUGHT REACT AND LEARNED ITALIAN COOKING IN TWO WEEKS. SKILLSWAP IS THE MOST EFFICIENT HUMAN NETWORK I'VE EVER SEEN."
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary border-4 border-secondary"></div>
+                <div>
+                  <p className="font-black text-xl uppercase">MARCO ROSSI</p>
+                  <p className="text-xs font-bold text-muted uppercase">FULL STACK CHEF</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex-1 card card-yellow p-12 relative -rotate-1 shadow-brutal-lg">
-            <Quote size={48} className="text-secondary mb-8" />
-            <p className="text-4xl font-black mb-12 leading-tight uppercase text-secondary">
-              "THE BARTER ECONOMY IS BACK. I SWAPPED MY MARKETING KNOWLEDGE FOR UI DESIGN TIPS. NO MONEY CHANGED HANDS, JUST VALUE."
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white border-4 border-secondary"></div>
-              <div>
-                <p className="font-black text-xl uppercase">SARAH JENSEN</p>
-                <p className="text-xs font-bold text-secondary uppercase">GROWTH HACKER</p>
+            <div className="flex-1 card card-yellow p-12 relative -rotate-1 shadow-brutal-lg">
+              <Quote size={48} className="text-secondary mb-8" />
+              <p className="text-4xl font-black mb-12 leading-tight uppercase text-secondary">
+                "THE BARTER ECONOMY IS BACK. I SWAPPED MY MARKETING KNOWLEDGE FOR UI DESIGN TIPS. NO MONEY CHANGED HANDS, JUST VALUE."
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white border-4 border-secondary"></div>
+                <div>
+                  <p className="font-black text-xl uppercase">SARAH JENSEN</p>
+                  <p className="text-xs font-bold text-secondary uppercase">GROWTH HACKER</p>
+                </div>
               </div>
             </div>
           </div>
+          <div className="h-2"></div>
         </div>
-        <div className="h-2"></div>
-      </div>
-    </section>
+      </section>
 
       {/* ═══ FOOTER ═══ */}
       <footer className="bg-secondary text-white py-16 px-10 border-t-4 border-primary w-full flex justify-center">
