@@ -15,7 +15,7 @@ def notification_list(request):
     return Response(serializer.data)
 
 
-@api_view(['PATCH'])
+@api_view(['PATCH', 'POST'])
 @permission_classes([IsAuthenticated])
 def mark_read(request, pk):
     """Mark a notification as read."""
@@ -29,7 +29,7 @@ def mark_read(request, pk):
     return Response(NotificationSerializer(notif).data)
 
 
-@api_view(['PATCH'])
+@api_view(['PATCH', 'POST'])
 @permission_classes([IsAuthenticated])
 def mark_all_read(request):
     """Mark all notifications as read."""

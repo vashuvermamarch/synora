@@ -28,7 +28,7 @@ export default function Navbar() {
 
   const markAsRead = async (id: number) => {
     try {
-      await api.post(`/notifications/${id}/read/`);
+      await api.patch(`/notifications/${id}/read/`);
       setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch { }
   };

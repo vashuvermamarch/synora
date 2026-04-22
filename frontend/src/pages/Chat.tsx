@@ -14,18 +14,33 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { api.get('/chat/messages/').then(r=>setConversations(r.data)).catch(()=>{}); }, []);
-  useEffect(() => { if(activeChat) loadMsgs(); }, [activeChat]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}); }, [messages]);
+  const loadConversations = () => { api.get('/chat/messages/').then(r => setConversations(r.data)).catch(() => { }); };
+  const loadMsgs = () => { if (activeChat) api.get(`/chat/messages/${activeChat}/`).then(r => setMessages(r.data)).catch(() => { }); };
 
-  const loadMsgs = () => { if(activeChat) api.get(`/chat/messages/${activeChat}/`).then(r=>setMessages(r.data)).catch(()=>{}); };
+  useEffect(() => {
+    loadConversations();
+    const interval = setInterval(loadConversations, 5000); // Poll conversations every 5s
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeChat) {
+      loadMsgs();
+      const interval = setInterval(loadMsgs, 3000); // Poll active chat messages every 3s
+      return () => clearInterval(interval);
+    }
+  }, [activeChat]);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const sendMsg = async () => {
-    if(!input.trim()||!activeChat) return;
+    if (!input.trim() || !activeChat) return;
     try {
       await api.post('/chat/messages/', { receiver: activeChat, content: input });
-      setInput(''); loadMsgs();
-    } catch {}
+      setInput(''); 
+      loadMsgs();
+      loadConversations();
+    } catch { }
   };
 
   const activePartner = conversations.find(c => c.user_id === activeChat);

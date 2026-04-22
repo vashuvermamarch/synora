@@ -3,8 +3,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
-from .models import Session
-from .serializers import SessionSerializer
+from .models import Session, SwapRequest
+from .serializers import SessionSerializer, SwapRequestSerializer
+from chat.models import Message
+from notifications.models import Notification
 
 
 @api_view(['POST'])
@@ -16,7 +18,41 @@ def create_session(request):
 
     serializer = SessionSerializer(data=data)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
+    session = serializer.save()
+
+    # If this session is created in response to a swap request, mark it accepted
+    swap_request_id = request.data.get('swap_request_id')
+    if swap_request_id:
+        try:
+            sr = SwapRequest.objects.get(id=swap_request_id, receiver=request.user)
+            sr.status = 'accepted'
+            sr.save()
+            
+            # Automaticaly connect via message
+            try:
+                Message.objects.create(
+                    sender=request.user,
+                    receiver=sr.sender,
+                    content=f"I've accepted your swap request! I've scheduled our session for {session.date} at {session.time}. Looking forward to it!"
+                )
+            except Exception as e:
+                print(f"Message creation failed: {e}")
+        except SwapRequest.DoesNotExist:
+            print("SwapRequest not found")
+        except Exception as e:
+            print(f"SwapRequest update failed: {e}")
+    else:
+        # If it's a direct session creation (User A schedules directly)
+        # Notify user2
+        try:
+            Notification.objects.create(
+                user=session.user2,
+                title="New Session Scheduled",
+                message=f"{request.user.username} has scheduled a skill swap session with you.",
+                type='session'
+            )
+        except Exception as e:
+            print(f"Notification creation failed: {e}")
 
     return Response({
         'message': 'Session created.',
@@ -31,7 +67,7 @@ def respond_session(request, pk):
     try:
         session = Session.objects.get(pk=pk, user2=request.user)
     except Session.DoesNotExist:
-        return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Session not found or not authorized.'}, status=status.HTTP_404_NOT_FOUND)
 
     new_status = request.data.get('status')
     if new_status not in ['accepted', 'declined', 'cancelled']:
@@ -42,7 +78,64 @@ def respond_session(request, pk):
 
     session.status = new_status
     session.save()
+
+    if new_status == 'accepted':
+        try:
+            # Automatically connect via message
+            Message.objects.create(
+                sender=request.user,
+                receiver=session.user1,
+                content=f"I've accepted your session request for {session.date}. Let's chat!"
+            )
+            Notification.objects.create(
+                user=session.user1,
+                title="Session Accepted",
+                message=f"{request.user.username} has accepted your session request.",
+                type='session'
+            )
+        except Exception as e:
+            print(f"Post-acceptance actions failed: {e}")
+
     return Response(SessionSerializer(session).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_swap_request(request):
+    """Initiate a swap request (User A -> User B)."""
+    receiver_id = request.data.get('receiver')
+    if not receiver_id:
+        return Response({'error': 'Receiver ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if already exists
+    if SwapRequest.objects.filter(sender=request.user, receiver_id=receiver_id, status='pending').exists():
+        return Response({'error': 'Request already pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    sr = SwapRequest.objects.create(sender=request.user, receiver_id=receiver_id)
+    
+    # Notify Receiver
+    Notification.objects.create(
+        user=sr.receiver,
+        title="New Swap Request",
+        message=f"{request.user.username} wants to swap skills with you.",
+        type='request'
+    )
+    
+    return Response(SwapRequestSerializer(sr).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_swap_requests(request):
+    """List incoming or outgoing swap requests."""
+    mode = request.query_params.get('mode', 'received')
+    if mode == 'sent':
+        requests = SwapRequest.objects.filter(sender=request.user)
+    else:
+        requests = SwapRequest.objects.filter(receiver=request.user)
+    
+    serializer = SwapRequestSerializer(requests, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['GET'])

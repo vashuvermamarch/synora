@@ -1,33 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Video, Check, X, Clock, CalendarDays } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Video, Check, X, Clock, CalendarDays, User } from 'lucide-react';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { Session } from '../types';
+import ScheduleModal from '../components/ScheduleModal';
 
 export default function Sessions() {
   const { user } = useAuthStore();
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [swapRequests, setSwapRequests] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ user2: '', date: '', time: '10:00', duration: 60 });
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  useEffect(() => { loadSessions(); }, []);
+  useEffect(() => { loadSessions(); loadRequests(); }, []);
 
   const loadSessions = () => { api.get('/sessions/').then(r => setSessions(r.data)).catch(() => { }); };
+  const loadRequests = () => { api.get('/sessions/requests/?mode=received').then(r => setSwapRequests(r.data)).catch(() => { }); };
 
   const handleRespond = async (id: number, status: string) => {
     await api.patch(`/sessions/respond/${id}/`, { status });
     loadSessions();
   };
 
-  const handleCreate = async () => {
-    try {
-      await api.post('/sessions/create/', { user2: parseInt(form.user2), date: form.date, time: form.time, duration: form.duration });
-      setShowModal(false); loadSessions();
-    } catch { alert('Failed to create session'); }
+  const openScheduleForRequest = (req: any) => {
+    setSelectedRequest(req);
+    setShowModal(true);
   };
 
   const filtered = filter === 'all' ? sessions : sessions.filter(s => s.status === filter);
+  const pendingRequests = swapRequests.filter(r => r.status === 'pending');
 
   return (
     <div className="w-full min-h-screen bg-surface" style={{ padding: '6rem 2rem' }}>
@@ -56,6 +59,55 @@ export default function Sessions() {
 
         {/* Thick Horizontal Divider */}
         <div className="w-full border-b-[8px] border-secondary mb-12"></div>
+
+        {/* Incoming Swap Requests Section */}
+        {pendingRequests.length > 0 && (
+          <div className="mb-24">
+            <div className="flex items-center gap-6 mb-8">
+              <h2 className="text-4xl font-black uppercase tracking-tighter bg-primary px-4 py-2 brutal-border brutal-shadow-sm">
+                INCOMING_REQUESTS
+              </h2>
+              <div className="flex-1 border-b-[4px] border-secondary border-dashed"></div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {pendingRequests.map(req => (
+                <div key={req.id} className="resource-card yellow group">
+                  <div className="p-8 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-16 h-16 bg-white border-[4px] border-secondary flex items-center justify-center brutal-shadow-sm group-hover:bg-secondary group-hover:text-white transition-colors">
+                        <User size={32} strokeWidth={3} />
+                      </div>
+                      <div className="badge badge-dark text-[10px] tracking-[0.2em]">
+                        NEW_SWAP
+                      </div>
+                    </div>
+
+                    <div className="mb-8">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-secondary opacity-70 mb-2 font-bold">
+                        Request From:
+                      </p>
+                      <h4 className="text-3xl font-black uppercase leading-tight tracking-tighter">
+                        {req.sender_name}
+                      </h4>
+                    </div>
+
+                    <div className="mt-auto pt-6 border-t-[4px] border-secondary border-dotted">
+                      <button
+                        onClick={() => openScheduleForRequest(req)}
+                        className="w-full btn btn-white flex items-center justify-center gap-3 font-black text-sm"
+                        style={{ boxShadow: '6px 6px 0px 0px #000' }}
+                      >
+                        <CalendarDays size={20} />
+                        SCHEDULE_NOW
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-wrap gap-4 mb-16" style={{ marginTop: '40px', marginBottom: '40px' }}>
@@ -130,9 +182,9 @@ export default function Sessions() {
                   )}
 
                   {s.status === 'accepted' && (
-                    <a href={s.jitsi_url} target="_blank" rel="noreferrer" className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 flex justify-center items-center gap-2 text-lg" style={{ boxShadow: '6px 6px 0px 0px #000' }}>
+                    <Link to={`/session/${s.room_name}`} className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 flex justify-center items-center gap-2 text-lg" style={{ boxShadow: '6px 6px 0px 0px #000' }}>
                       <Video size={24} /> JOIN CALL
-                    </a>
+                    </Link>
                   )}
 
                   {(s.status === 'completed' || s.status === 'declined' || s.status === 'cancelled') && (
@@ -150,47 +202,14 @@ export default function Sessions() {
 
         {/* Create Session Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-            <div className="bg-white border-[8px] border-secondary w-full max-w-2xl flex flex-col" onClick={e => e.stopPropagation()} style={{ boxShadow: '16px 16px 0px 0px #000' }}>
-
-              <div className="bg-secondary text-white p-6 border-b-[6px] border-secondary">
-                <h2 className="text-3xl font-black uppercase tracking-tighter">SCHEDULE SESSION</h2>
-              </div>
-
-              <div className="p-8 flex flex-col gap-6">
-                <div>
-                  <label className="block font-mono font-bold uppercase tracking-widest text-sm mb-2">PARTNER USER ID</label>
-                  <input type="number" value={form.user2} onChange={e => setForm({ ...form, user2: e.target.value })} className="w-full bg-white border-[4px] border-secondary p-4 font-bold text-lg outline-none focus:bg-[#E5E7EB]" placeholder="E.G. 42" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block font-mono font-bold uppercase tracking-widest text-sm mb-2">DATE</label>
-                    <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full bg-white border-[4px] border-secondary p-4 font-bold text-lg outline-none focus:bg-[#E5E7EB]" />
-                  </div>
-                  <div>
-                    <label className="block font-mono font-bold uppercase tracking-widest text-sm mb-2">TIME</label>
-                    <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} className="w-full bg-white border-[4px] border-secondary p-4 font-bold text-lg outline-none focus:bg-[#E5E7EB]" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-mono font-bold uppercase tracking-widest text-sm mb-2">DURATION (MINUTES)</label>
-                  <input type="number" value={form.duration} onChange={e => setForm({ ...form, duration: parseInt(e.target.value) })} className="w-full bg-white border-[4px] border-secondary p-4 font-bold text-lg outline-none focus:bg-[#E5E7EB]" />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-6 mt-8">
-                  <button onClick={() => setShowModal(false)} className="flex-1 bg-white border-[6px] border-secondary font-black uppercase tracking-widest hover:bg-[#E5E7EB] transition-colors py-4 text-xl" style={{ boxShadow: '8px 8px 0px 0px #000' }}>
-                    CANCEL
-                  </button>
-                  <button onClick={handleCreate} className="flex-1 bg-primary border-[6px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 text-xl" style={{ boxShadow: '8px 8px 0px 0px #000' }}>
-                    CREATE SESSION
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
+          <ScheduleModal 
+            isOpen={showModal}
+            onClose={() => { setShowModal(false); setSelectedRequest(null); }}
+            userId={selectedRequest?.sender}
+            userName={selectedRequest?.sender_name}
+            swapRequestId={selectedRequest?.id}
+            onSuccess={() => { loadSessions(); loadRequests(); }}
+          />
         )}
 
       </div>

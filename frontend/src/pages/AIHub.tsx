@@ -1,18 +1,50 @@
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react';
+import { MessageSquare, Plus } from 'lucide-react';
 import api from '../api/client';
 
 interface ChatMsg { role: 'user' | 'ai'; content: string; }
 
 export default function AIHub() {
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { role: 'ai', content: 'hello how can i help you to learn skills' }
+    { role: 'ai', content: 'Hello! I am **Synora Opal AI**, your skill-swap assistant. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeConvId, setActiveConvId] = useState<number | null>(null);
 
-  // Dynamic Chat History state
-  const [chatHistory] = useState<{ id: number; name: string; icon: any }[]>([]);
+  // Fetch conversations list on mount
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const res = await api.get('/ai/conversations/');
+      setConversations(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const loadHistory = async (id: number) => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/ai/chat/history/${id}/`);
+      const historyMsgs = res.data.flatMap((c: any) => [
+        { role: 'user', content: c.message },
+        { role: 'ai', content: c.response }
+      ]);
+      setMessages(historyMsgs.length > 0 ? historyMsgs : [
+        { role: 'ai', content: 'This conversation has no messages yet. Ask me something!' }
+      ]);
+      setActiveConvId(id);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  const startNewChat = () => {
+    setActiveConvId(null);
+    setMessages([{ role: 'ai', content: 'Hello! This is a **new conversation**. What would you like to learn about?' }]);
+  };
 
   const sendMessage = async (msg?: string) => {
     const text = msg || input;
@@ -20,8 +52,15 @@ export default function AIHub() {
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setInput(''); setLoading(true);
     try {
-      const res = await api.post('/ai/chat/', { message: text });
+      const res = await api.post('/ai/chat/', { 
+        message: text,
+        conversation_id: activeConvId 
+      });
       setMessages(prev => [...prev, { role: 'ai', content: res.data.response }]);
+      if (!activeConvId) {
+        setActiveConvId(res.data.conversation_id);
+        loadConversations();
+      }
     } catch {
       setMessages(prev => [...prev, { role: 'ai', content: 'Sorry, I encountered an error. Please try again.' }]);
     } finally { setLoading(false); }
@@ -33,12 +72,29 @@ export default function AIHub() {
       if (part.startsWith('```') && part.endsWith('```')) {
         const code = part.replace(/```(.*?)\n/, '').replace(/```$/, '');
         return (
-          <pre key={index} className="bg-black text-white p-6 my-6 overflow-x-auto">
+          <pre key={index} className="bg-black text-white p-6 my-6 overflow-x-auto border-l-[6px] border-primary brutal-shadow-sm">
             <code className="font-mono text-sm leading-relaxed whitespace-pre-wrap">{code}</code>
           </pre>
         );
       }
-      return <span key={index}>{part}</span>;
+      
+      // Basic Markdown Replacement Logic
+      let processed = part
+        .replace(/^### (.*$)/gim, '<h3 class="text-2xl font-black uppercase mt-8 mb-4">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 class="text-3xl font-black uppercase mt-10 mb-6">$2</h2>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-secondary underline decoration-primary decoration-[3px]">$1</strong>')
+        .replace(/^\* (.*$)/gim, '<div class="flex gap-4 mb-2"><span class="text-secondary font-black">→</span><span>$1</span></div>')
+        .replace(/^(\d+)\. (.*$)/gim, '<div class="flex gap-4 mb-2"><span class="text-secondary font-black font-mono">$1.</span><span>$2</span></div>')
+        .replace(/^---$/gim, '<hr class="border-t-[4px] border-secondary border-dashed my-8" />')
+        .replace(/\n/g, '<br />');
+
+      return (
+        <div 
+          key={index} 
+          className="markdown-content"
+          dangerouslySetInnerHTML={{ __html: processed }} 
+        />
+      );
     });
   };
 
@@ -53,35 +109,30 @@ export default function AIHub() {
 
         <div className="p-8 border-b-[8px] border-secondary">
           <button
-            onClick={() => setMessages([{ role: 'ai', content: 'hello how can i help you to learn skills' }])}
-            className="bg-primary border-[4px] border-secondary font-black uppercase tracking-widest py-4 text-lg hover:bg-secondary hover:text-primary transition-colors block"
-            style={{
-              boxShadow: '6px 6px 0px 0px #000',
-              margin: '20px auto',
-              width: 'calc(100% - 40px)'
-            }}
+            onClick={startNewChat}
+            className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest py-4 text-lg hover:bg-secondary hover:text-primary transition-colors flex items-center justify-center gap-3"
+            style={{ boxShadow: '6px 6px 0px 0px #000', margin: '20px auto', width: 'calc(100% - 40px)' }}
           >
-            New Chat
+            <Plus size={24} strokeWidth={3} /> NEW CHAT
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-4">
-          {chatHistory.length === 0 ? (
-            <div className="text-center p-6 border-[4px] border-secondary border-dashed text-muted font-mono text-xs uppercase tracking-widest">
-              No recent chats
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-grid">
+          {conversations.length === 0 ? (
+            <div className="text-center p-8 border-[4px] border-secondary border-dashed text-muted font-mono text-xs uppercase tracking-widest bg-white">
+              No chat history yet
             </div>
           ) : (
-            chatHistory.map((t, index) => {
-              const Icon = t.icon;
-              const isActive = index === 0;
+            conversations.map((c) => {
+              const isActive = activeConvId === c.id;
               return (
                 <button
-                  key={t.id}
-                  onClick={() => sendMessage(`Tell me about ${t.name}`)}
-                  className={`w-full text-left p-4 font-mono font-bold text-sm flex items-center gap-4 transition-all ${isActive ? 'bg-primary border-[4px] border-secondary' : 'bg-transparent border-[4px] border-transparent hover:bg-white hover:border-secondary'}`}
-                  style={isActive ? { boxShadow: '4px 4px 0px 0px #000' } : {}}
+                  key={c.id}
+                  onClick={() => loadHistory(c.id)}
+                  className={`w-full text-left p-5 font-mono font-bold text-xs flex items-center gap-4 transition-all brutal-border ${isActive ? 'bg-primary brutal-shadow-sm' : 'bg-white hover:bg-surface'}`}
                 >
-                  <Icon size={20} strokeWidth={3} /> {t.name}
+                  <MessageSquare size={18} strokeWidth={3} className={isActive ? 'text-secondary' : 'text-muted'} />
+                  <span className="truncate">{c.title}</span>
                 </button>
               );
             })

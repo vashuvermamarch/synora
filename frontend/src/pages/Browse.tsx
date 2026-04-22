@@ -3,6 +3,7 @@ import { Search, LayoutGrid, List } from 'lucide-react';
 import api from '../api/client';
 import type { Profile } from '../types';
 import { useAuthStore } from '../store/authStore';
+import ScheduleModal from '../components/ScheduleModal';
 
 export default function Browse() {
   const { user } = useAuthStore();
@@ -25,13 +26,14 @@ export default function Browse() {
     return true;
   });
 
-  const handleRequest = async (profileUserId: number) => {
+  const handleSwapRequest = async (p: Profile) => {
     try {
-      await api.post('/sessions/create/', { user2: profileUserId, date: new Date().toISOString().split('T')[0], time: '10:00', duration: 60 });
-      alert('Session request sent!');
-    } catch { alert('Failed to send request'); }
+      await api.post('/sessions/request/', { receiver: p.id });
+      alert(`Swap request sent to ${p.username}!`);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to send swap request');
+    }
   };
-
   return (
     <div className="w-full min-h-screen bg-surface" style={{ padding: '6rem 2rem' }}>
       <div className="max-w-[1400px] mx-auto">
@@ -126,7 +128,7 @@ export default function Browse() {
 
                 {/* Action Button */}
                 <button
-                  onClick={() => handleRequest(parseInt(String(p.id)))}
+                  onClick={() => handleSwapRequest(p)}
                   className="w-full bg-primary text-secondary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors"
                   style={{ padding: '1rem', fontSize: '1rem' }}
                 >

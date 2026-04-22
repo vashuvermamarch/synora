@@ -60,7 +60,7 @@ export default function App() {
           <Route path="/resources/create" element={<ProtectedRoute><CreateResource /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/ai" element={<ProtectedRoute><AIHub /></ProtectedRoute>} />
-          <Route path="/session/:roomName" element={<ProtectedRoute><VideoSession /></ProtectedRoute>} />
+          <Route path="/session/:roomName" element={<VideoSession />} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" />} />
