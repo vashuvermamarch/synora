@@ -3,16 +3,48 @@ from .models import Profile, VerificationRequest
 from skills.models import Skill
 
 
+class SkillRelatedField(serializers.RelatedField):
+    def get_queryset(self):
+        return Skill.objects.all()
+
+    def to_internal_value(self, data):
+        # If it's already an ID (integer)
+        if isinstance(data, int):
+            try:
+                return Skill.objects.get(pk=data)
+            except Skill.DoesNotExist:
+                raise serializers.ValidationError(f"Skill with id {data} does not exist.")
+        
+        # If it's a string (could be an ID as string or a new skill name)
+        if isinstance(data, str):
+            data = data.strip()
+            if not data:
+                raise serializers.ValidationError("Skill name cannot be empty.")
+            
+            # Check if it's a numeric string (ID)
+            if data.isdigit():
+                try:
+                    return Skill.objects.get(pk=int(data))
+                except Skill.DoesNotExist:
+                    raise serializers.ValidationError(f"Skill with id {data} does not exist.")
+            
+            # Otherwise, it's a name. Find or create.
+            # We use upper() to maintain consistency with SignupSerializer
+            skill, _ = Skill.objects.get_or_create(name=data.upper())
+            return skill
+            
+        raise serializers.ValidationError(f"Expected integer or string, got {type(data)}.")
+
+    def to_representation(self, value):
+        return value.id
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.CharField(source='user.email', read_only=True)
     role = serializers.CharField(source='user.role', read_only=True)
-    skills_to_learn = serializers.PrimaryKeyRelatedField(
-        queryset=Skill.objects.all(), many=True, required=False
-    )
-    skills_to_teach = serializers.PrimaryKeyRelatedField(
-        queryset=Skill.objects.all(), many=True, required=False
-    )
+    skills_to_learn = SkillRelatedField(many=True, required=False)
+    skills_to_teach = SkillRelatedField(many=True, required=False)
     skills_to_learn_names = serializers.SerializerMethodField()
     skills_to_teach_names = serializers.SerializerMethodField()
 
