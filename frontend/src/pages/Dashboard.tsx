@@ -6,12 +6,13 @@ import api from '../api/client';
 import type { Session, Notification as NotifType } from '../types';
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
+  const { user, fetchUser } = useAuthStore();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [notifications, setNotifications] = useState<NotifType[]>([]);
   const [stats, setStats] = useState({ sessions: 0, matches: 0, messages: 0 });
 
   useEffect(() => {
+    fetchUser();
     api.get('/sessions/').then(r => { setSessions(r.data.slice(0, 5)); setStats(s => ({...s, sessions: r.data.length})); }).catch(()=>{});
     api.get('/notifications/').then(r => setNotifications(r.data.slice(0, 5))).catch(()=>{});
     api.get('/chat/messages/').then(r => setStats(s => ({...s, messages: r.data.length}))).catch(()=>{});
@@ -43,14 +44,21 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              {/* Global Rating (Static fallback since backend lacks rating) */}
+              {/* Global Rating */}
               <div className="bg-white border-[6px] border-secondary flex flex-col justify-between" style={{ padding: '2rem', boxShadow: '12px 12px 0px 0px #000' }}>
                 <div>
                   <h3 className="font-black uppercase tracking-widest" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>GLOBAL RATING</h3>
-                  <div className="font-black leading-none" style={{ fontSize: '5rem' }}>{stats.sessions > 0 ? '4.9' : 'N/A'}</div>
+                  <div className="font-black leading-none" style={{ fontSize: '5rem' }}>{user?.rating_count && user.rating_count > 0 ? user.average_rating : 'N/A'}</div>
                 </div>
                 <div className="flex gap-1 mt-6 text-primary">
-                  {[1,2,3,4,5].map(i => <Star key={i} size={24} fill={stats.sessions > 0 ? "currentColor" : "none"} className={stats.sessions > 0 ? "" : "text-muted opacity-30"} />)}
+                  {[1,2,3,4,5].map(i => (
+                    <Star 
+                      key={i} 
+                      size={24} 
+                      fill={(user?.average_rating || 0) >= i ? "currentColor" : "none"} 
+                      className={(user?.average_rating || 0) >= i ? "" : "text-muted opacity-30"} 
+                    />
+                  ))}
                 </div>
               </div>
 

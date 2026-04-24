@@ -8,4 +8,6 @@ urlpatterns = [
     path('<int:pk>/complete/', views.complete_session, name='session-complete'),
     path('request/', views.create_swap_request, name='swap-request-create'),
     path('requests/', views.list_swap_requests, name='swap-request-list'),
+    path('rating/', views.submit_rating, name='session-rating'),
+    path('room/<str:room_name>/', views.get_session_by_room, name='session-by-room'),
 ]

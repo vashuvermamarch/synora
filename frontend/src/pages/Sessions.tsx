@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Video, Check, X, Clock, CalendarDays, User } from 'lucide-react';
+import { Video, Check, X, Clock, CalendarDays, User, Star } from 'lucide-react';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import type { Session } from '../types';
 import ScheduleModal from '../components/ScheduleModal';
+import RatingModal from '../components/RatingModal';
 
 export default function Sessions() {
   const { user } = useAuthStore();
@@ -13,6 +14,7 @@ export default function Sessions() {
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [ratingSession, setRatingSession] = useState<Session | null>(null);
 
   useEffect(() => { loadSessions(); loadRequests(); }, []);
 
@@ -35,8 +37,7 @@ export default function Sessions() {
   return (
     <div className="w-full min-h-screen bg-surface" style={{ padding: '6rem 2rem' }}>
       <div className="max-w-[1400px] mx-auto">
-
-        {/* Header Section */}
+        {/* ... existing header code ... */}
         <div className="mb-8 relative">
           <h1 className="text-[5rem] md:text-[7rem] font-black leading-[0.85] tracking-tighter uppercase mb-6">
             MANAGE<br />SESSIONS
@@ -182,12 +183,31 @@ export default function Sessions() {
                   )}
 
                   {s.status === 'accepted' && (
-                    <Link to={`/session/${s.room_name}`} className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 flex justify-center items-center gap-2 text-lg" style={{ boxShadow: '6px 6px 0px 0px #000' }}>
-                      <Video size={24} /> JOIN CALL
-                    </Link>
+                    <>
+                      <Link to={`/session/${s.room_name}`} className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 flex justify-center items-center gap-2 text-lg" style={{ boxShadow: '6px 6px 0px 0px #000' }}>
+                        <Video size={24} /> JOIN CALL
+                      </Link>
+                      <button 
+                        onClick={() => setRatingSession(s)}
+                        className="w-full bg-white border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-primary transition-colors py-2 flex justify-center items-center gap-2 text-xs" 
+                        style={{ boxShadow: '4px 4px 0px 0px #000' }}
+                      >
+                        <Star size={16} /> RATE & COMPLETE
+                      </button>
+                    </>
                   )}
 
-                  {(s.status === 'completed' || s.status === 'declined' || s.status === 'cancelled') && (
+                  {s.status === 'completed' && !s.has_rated && (
+                    <button 
+                      onClick={() => setRatingSession(s)}
+                      className="w-full bg-primary border-[4px] border-secondary font-black uppercase tracking-widest hover:bg-secondary hover:text-white transition-colors py-4 flex justify-center items-center gap-2 text-lg" 
+                      style={{ boxShadow: '6px 6px 0px 0px #000' }}
+                    >
+                      <Star size={24} fill="currentColor" /> RATE NOW
+                    </button>
+                  )}
+
+                  {((s.status === 'completed' && s.has_rated) || s.status === 'declined' || s.status === 'cancelled') && (
                     <div className="text-center font-mono font-bold text-muted text-sm tracking-widest uppercase">
                       SESSION {s.status}
                     </div>
@@ -209,6 +229,20 @@ export default function Sessions() {
             userName={selectedRequest?.sender_name}
             swapRequestId={selectedRequest?.id}
             onSuccess={() => { loadSessions(); loadRequests(); }}
+          />
+        )}
+
+        {/* Rating Modal */}
+        {ratingSession && (
+          <RatingModal
+            isOpen={!!ratingSession}
+            onClose={() => setRatingSession(null)}
+            sessionId={ratingSession.id}
+            partnerName={ratingSession.user1_name === user?.username ? ratingSession.user2_name : ratingSession.user1_name}
+            onSuccess={() => {
+              loadSessions();
+              setRatingSession(null);
+            }}
           />
         )}
 

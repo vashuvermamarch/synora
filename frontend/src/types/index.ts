@@ -9,6 +9,8 @@ export interface User {
   is_verified: boolean;
   is_active: boolean;
   date_joined: string;
+  average_rating: number;
+  rating_count: number;
 }
 
 export interface Profile {
@@ -23,6 +25,8 @@ export interface Profile {
   skills_to_teach: number[];
   skills_to_learn_names: string[];
   skills_to_teach_names: string[];
+  average_rating: number;
+  rating_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +48,7 @@ export interface Session {
   status: 'pending' | 'accepted' | 'declined' | 'completed' | 'cancelled';
   room_name: string;
   jitsi_url: string;
+  has_rated: boolean;
   created_at: string;
 }
 

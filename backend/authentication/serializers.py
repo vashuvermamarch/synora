@@ -95,7 +95,10 @@ class ResendOTPSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    average_rating = serializers.DecimalField(source='profile.average_rating', read_only=True, max_digits=3, decimal_places=2)
+    rating_count = serializers.IntegerField(source='profile.rating_count', read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'role', 'is_verified', 'is_active', 'date_joined']
+        fields = ['id', 'username', 'email', 'phone', 'role', 'is_verified', 'is_active', 'date_joined', 'average_rating', 'rating_count']
         read_only_fields = ['id', 'is_verified', 'is_active', 'date_joined']

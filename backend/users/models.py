@@ -17,6 +17,8 @@ class Profile(models.Model):
     skills_to_teach = models.ManyToManyField(
         'skills.Skill', blank=True, related_name='teachers'
     )
+    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    rating_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

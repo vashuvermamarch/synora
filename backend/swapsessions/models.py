@@ -62,3 +62,24 @@ class SwapRequest(models.Model):
 
     def __str__(self):
         return f"Swap Request: {self.sender.username} → {self.receiver.username}"
+
+
+class Rating(models.Model):
+    """Rating given by a user to another after a session."""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='ratings')
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ratings_given'
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ratings_received'
+    )
+    score = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('session', 'from_user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Rating: {self.from_user.username} → {self.to_user.username} ({self.score})"
